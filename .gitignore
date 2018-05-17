@@ -1,3 +1,7 @@
 venv*
 .DS_Store*
 *.pyc
+cifar/
+exps/
+*.swp
+*.log

@@ -2,7 +2,7 @@ import numpy as np
 
 # global vars
 n_exp        = 5
-k            = 100
+k            = 4000
 # model vars
 drop         = 0.5
 std          = 0.15
@@ -13,11 +13,11 @@ w_norm       = True
 lr           = 0.002
 beta2        = 0.99
 num_epochs   = 300
-batch_size   = 100
+batch_size   = 25
 # temporal ensembling vars
 alpha        = 0.6
 data_norm    = 'channelwise'
 divide_by_bs = False
 # RNG
 rng          = np.random.RandomState(42)
-seeds        = [rng.randint(200) for _ in xrange(n_exp)]
+seeds        = [rng.randint(200) for _ in range(n_exp)]

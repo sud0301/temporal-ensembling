@@ -2,10 +2,11 @@ import numpy as np
 from timeit import default_timer as timer
 import torch
 from torch.autograd import Variable
+#from torch._C_ import VariableBase
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import calc_metrics, prepare_mnist, weight_schedule
-
+from utils import calc_metrics, prepare_mnist, weight_schedule, prepare_cifar10
+from torchvision import transforms
 
 def sample_train(train_dataset, test_dataset, batch_size, k, n_classes,
                  seed, shuffle_train=True, return_idxs=True):
@@ -18,10 +19,16 @@ def sample_train(train_dataset, test_dataset, batch_size, k, n_classes,
     other = torch.zeros(n - k)
     card = k // n_classes
     
-    for i in xrange(n_classes):
+    for i in range(n_classes):
+       
+        train_dataset.train_labels = torch.IntTensor(train_dataset.train_labels) 
         class_items = (train_dataset.train_labels == i).nonzero()
+        
+        #class_items = [j for j, e in enumerate(train_dataset.train_labels) if e == i]       
+
         n_class = len(class_items)
         rd = np.random.permutation(np.arange(n_class))
+        rd = torch.from_numpy(rd)
         indices[i * card: (i + 1) * card] = class_items[rd[:card]]
         other[cpt: cpt + n_class - card] = class_items[rd[card:]]
         cpt += n_class - card
@@ -47,6 +54,8 @@ def temporal_loss(out1, out2, w, labels):
     
     # MSE between current and temporal outputs
     def mse_loss(out1, out2):
+        #out1 = Variable(out1)    
+        #out2 = Variable(out2)    
         quad_diff = torch.sum((F.softmax(out1, dim=1) - F.softmax(out2, dim=1)) ** 2)
         return quad_diff / out1.data.nelement()
     
@@ -56,6 +65,8 @@ def temporal_loss(out1, out2, w, labels):
         nbsup = len(nnz)
         # check if labeled samples in batch, return 0 if none
         if nbsup > 0:
+            #out = VariableBase(out)
+            #out = torch.Tensor(out)
             masked_outputs = torch.index_select(out, 0, nnz.view(nbsup))
             masked_labels = labels[cond]
             loss = F.cross_entropy(masked_outputs, masked_labels)
@@ -75,7 +86,8 @@ def train(model, seed, k=100, alpha=0.6, lr=0.002, beta2=0.99, num_epochs=150,
           print_res=True, **kwargs):
     
     # retrieve data
-    train_dataset, test_dataset = prepare_mnist()
+    #train_dataset, test_dataset = prepare_mnist()
+    train_dataset, test_dataset = prepare_cifar10()
     ntrain = len(train_dataset)
 
     # build model
@@ -106,7 +118,7 @@ def train(model, seed, k=100, alpha=0.6, lr=0.002, beta2=0.99, num_epochs=150,
         w = weight_schedule(epoch, max_epochs, max_val, ramp_up_mult, k, n_samples)
      
         if (epoch + 1) % 10 == 0:
-            print 'unsupervised loss weight : {}'.format(w)
+            print ('unsupervised loss weight : {}'.format(w))
         
         # turn it into a usable pytorch object
         w = torch.autograd.Variable(torch.FloatTensor([w]).cuda(), requires_grad=False)
@@ -162,7 +174,7 @@ def train(model, seed, k=100, alpha=0.6, lr=0.002, beta2=0.99, num_epochs=150,
     model.eval()
     acc = calc_metrics(model, test_loader)
     if print_res:
-        print 'Accuracy of the network on the 10000 test images: %.2f %%' % (acc)
+        print ('Accuracy of the network on the 10000 test images: %.2f %%' % (acc))
         
     # test best model
     checkpoint = torch.load('model_best.pth.tar')
@@ -170,6 +182,6 @@ def train(model, seed, k=100, alpha=0.6, lr=0.002, beta2=0.99, num_epochs=150,
     model.eval()
     acc_best = calc_metrics(model, test_loader)
     if print_res:
-        print 'Accuracy of the network (best model) on the 10000 test images: %.2f %%' % (acc_best)
+        print ('Accuracy of the network (best model) on the 10000 test images: %.2f %%' % (acc_best))
      
     return acc, acc_best, losses, sup_losses, unsup_losses, indices

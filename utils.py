@@ -10,11 +10,11 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torchvision.datasets as datasets
 import torchvision.transforms as tf
-
+from torchvision import transforms
 
 class GaussianNoise(nn.Module):
     
-    def __init__(self, batch_size, input_shape=(1, 28, 28), std=0.05):
+    def __init__(self, batch_size, input_shape=(3, 32, 32), std=0.05):
         super(GaussianNoise, self).__init__()
         self.shape = (batch_size,) + input_shape
         self.noise = Variable(torch.zeros(self.shape).cuda())
@@ -46,6 +46,13 @@ def prepare_mnist():
     
     return train_dataset, test_dataset
 
+
+def prepare_cifar10():
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    train_dataset = datasets.CIFAR10('cifar', train=True, download=True, transform=transform)
+    test_dataset = datasets.CIFAR10('cifar', train=False, download=True, transform=transform)
+       
+    return train_dataset, test_dataset
 
 def ramp_up(epoch, max_epochs, max_val, mult):
     if epoch == 0:
@@ -108,10 +115,10 @@ def save_losses(losses, sup_losses, unsup_losses, fname, labels=None):
     colors = [(float(c[0]) / 255, float(c[1]) / 255, float(c[2]) / 255) for c in colors]
 
     fig, axs = plt.subplots(3, 1, figsize=(12, 18))
-    for i in xrange(3):
+    for i in range(3):
         axs[i].tick_params(axis="both", which="both", bottom="off", top="off",    
                            labelbottom="on", left="off", right="off", labelleft="on")
-    for i in xrange(len(losses)):
+    for i in range(len(losses)):
         axs[0].plot(losses[i], color=colors[i])
         axs[1].plot(sup_losses[i], color=colors[i])
         axs[2].plot(unsup_losses[i], color=colors[i])
@@ -179,7 +186,7 @@ def save_seed_samples(fname, indices):
     fig = plt.figure(figsize=(15, 60))
     gs = gsp.GridSpec(20, 5, width_ratios=[1, 1, 1, 1, 1],
                       wspace=0.0, hspace=0.0)
-    for ll in xrange(100):
+    for ll in range(100):
         i = ll // 5
         j = ll % 5
         img = imgs[ll].numpy()
